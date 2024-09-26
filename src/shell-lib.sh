@@ -53,8 +53,11 @@ function logger() {
     esac
 }
 
-function get_os() {
-    grep "^ID=" /etc/os-release | cut -d "=" -f2
+function get_os_info() {
+    OS_NAME=$(grep "^ID=" /etc/os-release | cut -d "=" -f2)
+    OS_VERSION=$(grep "^VERSION_ID=" /etc/os-release | cut -d "=" -f2 | tr -d '"')
+    OS_FAMILY=$(grep "^ID_LIKE=" /etc/os-release | cut -d "=" -f2)
+    echo "{\"name\": \"${OS_NAME}\", \"version\": \"${OS_VERSION}\", \"family\": \"${OS_FAMILY}\"}"
 }
 
 function install_pkg() {
@@ -105,6 +108,13 @@ function install_pkg() {
 }
 
 function check_error() {
-    [ $? -ne 0 ] && echo 1
+    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:check_error" "Invalid args:\n\n$(echo '[missing-args] [required] [valid-values]\nexit-on-failure TRUE yes,no\nmessage FALSE error-message' | column -t)"
+    [[ "$1" =~ yes|no ]] logger "WARN" "shellsuite:lib:check_error" "Invalid input for [exit-on-failure]. Valid values: true or false"
+
+    EXIT_ON_FAILURE="$1"
+    ERROR_MESSAGE="$2"
+
+    [[ -z "${ERROR_MESSAGE}" ]] && [[ $? -ne 0 ]] && logger "ERROR" "shellsuite:lib:check_error[$0]" "${ERROR_MESSAGE}"
+    [[ "${EXIT_ON_FAILURE}" == "true" ]] && exit 1
 }
 

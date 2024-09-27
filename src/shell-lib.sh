@@ -118,3 +118,29 @@ function check_error() {
     [[ "${EXIT_ON_FAILURE}" == "true" ]] && exit 1
 }
 
+function extract() {
+    if [ -f "$1" ]; then
+        case "$1" in
+            *.rar)      unrar e "$1"   ;;
+            *.tar.bz2)  tar -jxvf "$1" ;;
+            *.tar.gz)   tar -zxvf "$1" ;;
+            *.bz2)      bunzip2 "$1"   ;;
+            *.gz)       gunzip "$1"    ;;
+            *.tar)      tar -xvf "$1"  ;;
+            *.tbz2)     tar -jxvf "$1" ;;
+            *.tgz)      tar -zxvf "$1" ;;
+            *.zip)      unzip "$1"     ;;
+            *)          echo "'$1' cannot be extracted/mounted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file to extract"
+    fi
+}
+
+function rotate() {
+    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:rotate" "Invalid args:\n\n$(echo '[missing-args] [required] [valid-values]\nfilenames TRUE file.txt' | column -t)"
+    for file in "$@"; do
+        NOW=$(date +%Y%m%dT%H%M%S)
+        cp "${file}" "${file}-${NOW}" && cp /dev/null "${file}"
+    done
+}

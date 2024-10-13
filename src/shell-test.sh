@@ -6,7 +6,7 @@ function skip() {
   TEST_FILES_GLOB="$(find "${PWD}" -name "test_*.sh")"
   functions_to_skip=$(grep -zoPh "${SKIP_PATTERN}" "${TEST_FILES_GLOB}" | grep -zoP "test_.*" | sed -E "s|(test_.*).*\(\).*|\1|g")
   
-  for function in ${functions_to_skip[@]}; do
+  for function in "${functions_to_skip[@]}"; do
     sed -E "s|^(${function})|#\1|g" > "${TEST_FILES_GLOB}"
     echo "[SKIP] - ${function}"
   done
@@ -26,7 +26,7 @@ FAILED=0
 PASSED=0
 
 START_TIME=$(date +%s)
-for test in ${tests[@]}; do
+for test in "${tests[@]}"; do
   if ${test} | grep PASS; then
     PASSED=$((PASSED+1))
   elif ${test} | grep FAIL; then
@@ -38,8 +38,8 @@ FINISH_TIME=$(date +%s)
 
 
 DURATION_TIME=$(date -d @$((FINISH_TIME - START_TIME)) +%M:%S.%s)
-STARTED_AT=$(date -d @${START_TIME} +'%Y-%m-%dT%H:%M:%S.%s')
-FINISHED_AT=$(date -d @${START_TIME} +'%Y-%m-%dT%H:%M:%S.%s')
+STARTED_AT=$(date -d "@${START_TIME}" +'%Y-%m-%dT%H:%M:%S.%s')
+FINISHED_AT=$(date -d "@${START_TIME}" +'%Y-%m-%dT%H:%M:%S.%s')
 
 HEADER="\nRUNNED\tSKIPPED\tFAILED\tPASSED\tDURATION_TIME\tSTART_TIME\tFINISH_TIME"
 DATA="${RUNNED}\t${SKIPPED}\t${FAILED}\t${PASSED}\t${DURATION_TIME}\t${STARTED_AT}\t${FINISHED_AT}"

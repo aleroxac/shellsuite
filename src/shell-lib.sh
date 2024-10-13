@@ -2,7 +2,8 @@
 
 
 ## ---------- IMPORTS
-. $(find "${PWD}" -type f -wholename "*/mig-automations/scripts/utils/utils.sh")
+# shellcheck disable=SC1090
+. "$(find "${PWD}" -type f -wholename "*/mig-automations/scripts/utils/utils.sh")"
 
 
 
@@ -54,15 +55,15 @@ function logger() {
 }
 
 function check_args() {
-  local arg_list=("$@")
-  local invalid_args=()
+  arg_list=("$@")
+  invalid_args=()
 
   for arg_info in "${arg_list[@]}"; do
-    local arg_name=$(echo "$arg_info" | cut -d':' -f1)
-    local arg_type=$(echo "$arg_info" | cut -d':' -f2)
-    local arg_required=$(echo "$arg_info" | cut -d':' -f3)
-    local arg_valid_values=$(echo "$arg_info" | cut -d':' -f4)
-    local arg_example=$(echo "$arg_info" | cut -d':' -f5)
+    arg_name=$(echo "$arg_info" | cut -d':' -f1)
+    arg_type=$(echo "$arg_info" | cut -d':' -f2)
+    arg_required=$(echo "$arg_info" | cut -d':' -f3)
+    arg_valid_values=$(echo "$arg_info" | cut -d':' -f4)
+    arg_example=$(echo "$arg_info" | cut -d':' -f5)
 
     if [ "$arg_required" == "true" ] && [ -z "${!arg_name}" ]; then
       invalid_args+=("$arg_name           $arg_type      TRUE      $arg_valid_values        $arg_example")
@@ -99,13 +100,14 @@ function check_args() {
 }
 
 function check_error() {
-    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:check_error" "Invalid args:\n\n$(echo '[missing-args] [required] [valid-values]\nexit-on-failure TRUE yes,no\nmessage FALSE error-message' | column -t)"
-    [[ "$1" =~ yes|no ]] logger "WARN" "shellsuite:lib:check_error" "Invalid input for [exit-on-failure]. Valid values: true or false"
+    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:check_error" "Invalid args:\n\n$(echo -e '[missing-args] [required] [valid-values]\nexit-on-failure TRUE yes,no\nmessage FALSE error-message' | column -t)"
+    [[ "$1" =~ yes|no ]] && logger "WARN" "shellsuite:lib:check_error" "Invalid input for [exit-on-failure]. Valid values: true or false"
 
     EXIT_ON_FAILURE="$1"
     ERROR_MESSAGE="$2"
 
-    [[ -z "${ERROR_MESSAGE}" ]] && [[ $? -ne 0 ]] && logger "ERROR" "shellsuite:lib:check_error[$0]" "${ERROR_MESSAGE}"
+    # shellcheck disable=SC2181
+    if [[ $? -ne 0 ]]; then if [[ -z "${ERROR_MESSAGE}" ]]; then logger "ERROR" "shellsuite:lib:check_error[$0]" "${ERROR_MESSAGE}"; fi; fi
     [[ "${EXIT_ON_FAILURE}" == "true" ]] && exit 1
 }
 
@@ -167,7 +169,7 @@ function get_os_info() {
 }
 
 function install_pkg() {
-    PKGS="$@"
+    PKGS=("$@")
 
     PKGS_TO_INSTALL=$(echo "${PKGS[@]}" | tr " " "\n" | wc -l)
     APPS_ALREADY_INSTALLED=$(echo "${PKGS[@]}" | tr ' ' '\n' | cut -d ':' -f2| xargs which | wc -l)
@@ -190,7 +192,7 @@ function install_pkg() {
         fi
 
         # Run package manager update
-        which sudo && sudo ${PKGMAN} ${PKGMAN_UPDATE_CMD} || ${PKGMAN} ${PKGMAN_UPDATE_CMD}
+        if which sudo; then sudo "${PKGMAN}" "${PKGMAN_UPDATE_CMD}"; else "${PKGMAN}" "${PKGMAN_UPDATE_CMD}"; fi
         
         PKG_LIST=()
         for pkg in "${PKGS[@]}"; do
@@ -205,8 +207,8 @@ function install_pkg() {
             fi
         done
 
-        if [ $(echo "${#PKG_LIST[@]}") -ge 1 ]; then
-            which sudo && sudo ${PKGMAN} ${PKGMAN_INSTALL_CMD} "${PKG_LIST[@]}" || ${PKGMAN} ${PKGMAN_INSTALL_CMD} "${PKG_LIST[@]}"
+        if [ "${#PKG_LIST[@]}" -ge 1 ]; then
+            if which sudo; then sudo "${PKGMAN}" "${PKGMAN_INSTALL_CMD}" "${PKG_LIST[@]}"; else "${PKGMAN}" "${PKGMAN_INSTALL_CMD}" "${PKG_LIST[@]}"; fi
         fi
     else
         logger "INFO" "shellsuite:lib:install_pkg" "All requirements are installed"
@@ -233,7 +235,7 @@ function extract() {
 }
 
 function rotate() {
-    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:rotate" "Invalid args:\n\n$(echo '[missing-args] [required] [valid-values]\nfilenames TRUE file.txt' | column -t)"
+    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:rotate" "Invalid args:\n\n$(echo -e '[missing-args] [required] [valid-values]\nfilenames TRUE file.txt' | column -t)"
     for file in "$@"; do
         NOW=$(date +%Y%m%dT%H%M%S)
         cp "${file}" "${file}-${NOW}" && cp /dev/null "${file}"
@@ -241,23 +243,27 @@ function rotate() {
 }
 
 function check_connectivity() {
-    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:check_connectivity" "Invalid args:\n\n$(echo '[missing-args] [required] [valid-values]\ntarget_ip TRUE 10.10.0.100\ntarget_port TRUE 8080' | column -t)"
+    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:check_connectivity" "Invalid args:\n\n$(echo -e '[missing-args] [required] [valid-values]\ntarget_ip TRUE 10.10.0.100\ntarget_port TRUE 8080' | column -t)"
     target_ip="$1"
     target_port="$2"
     time nc -zv "${target_ip}" "${target_port}"
 }
 
 function grow_and_resize_disk() {
-    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:grow_and_resize_disk" "Invalid args:\n\n$(echo '[missing-args] [required] [valid-values]\ndevice TRUE /dev/sda\npartition TRUE 1' | column -t)"
-    sudo growpart  ${device} ${partition}
-    sudo resize2fs ${device}
+    [[ "$#" -ne 1 ]] && logger "WARN" "shellsuite:lib:grow_and_resize_disk" "Invalid args:\n\n$(echo -e '[missing-args] [required] [valid-values]\ndevice TRUE /dev/sda\npartition TRUE 1' | column -t)"
+
+    device="$1"
+    partition="$2"
+
+    sudo growpart  "${device}" "${partition}"
+    sudo resize2fs "${device}"
 }
 
 function reset_commit_author() {
-    LAST_COMMIT_AUTHOR=$(echo $(git log -1 --pretty=format:"%an"))
+    LAST_COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
     CURRENT_USER=$(git config user.name)
 
-    if [[ "${LAST_COMMIT_AUTHOR}" == ${CURRENT_USER} ]]; then
+    if [[ "${LAST_COMMIT_AUTHOR}" == "${CURRENT_USER}" ]]; then
         logger "WARN" "reset_commit_author" "The last commit author and the current git user are the same. Switch to another user and try again."
         exit 0
     fi
@@ -272,7 +278,7 @@ function ssh_proxy() {
     TARGET_INSTANCE_IP="$4"
     TARGET_INSTANCE_PORT="$5"
     
-    ssh -L ${TARGET_INSTANCE_PORT}:${TARGET_INSTANCE_IP}:${TARGET_INSTANCE_PORT} -i ${PROXY_SERVER_SSHKEY_PATH} -N ${PROXY_SERVER_USER}@${PROXY_SERVER_IP}
+    ssh -L "${TARGET_INSTANCE_PORT}:${TARGET_INSTANCE_IP}:${TARGET_INSTANCE_PORT}" -i "${PROXY_SERVER_SSHKEY_PATH}" -N "${PROXY_SERVER_USER}@${PROXY_SERVER_IP}"
 
     SSH_PORT_FORWARD_PID=$(pgrep -f 'ssh -L')
     logger "INFO" "ssh_proxy" "ssh-proxy running via PID: ${SSH_PORT_FORWARD_PID}"
@@ -286,7 +292,7 @@ function get_k8s_resource_with_field() {
     resource_type="$1"
     field_pattern="$2"
     namespace="$3"
-    kubectl get ${resource_type} -o jsonpath="{range .items[?(@"${field_pattern}")]}{.metadata.name}{\\"\n\\"}{end}" --namespace "${namespace}"
+    kubectl get "${resource_type}" -o jsonpath="{range .items[?(@${field_pattern})]}{.metadata.name}{\"\n\"}{end}" --namespace "${namespace}"
 }
 
 function get_k8s_resource_with_key_value_field() {
@@ -294,7 +300,7 @@ function get_k8s_resource_with_key_value_field() {
     pattern_key="$2"
     pattern_value="$3"
     namespace="$4"
-    kubectl get ${resource_type} -o json -n ${namespace} | jq -r ".items[] | select(${pattern_key} == "${pattern_value}") | .metadata.name"
+    kubectl get "${resource_type}" -o json -n "${namespace}" | jq -r ".items[] | select(${pattern_key} == \"${pattern_value}\") | .metadata.name"
 }
 
 function past_commit() {
